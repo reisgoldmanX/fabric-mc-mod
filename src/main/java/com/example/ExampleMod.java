@@ -45,7 +45,33 @@ public class ExampleMod implements ModInitializer {
                     }
                     return 1;
                 }));
+            // Register enchantarmor command
+            dispatcher.register(CommandManager.literal("enchantarmor")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(context -> {
+                    if (context.getSource().getEntity() instanceof PlayerEntity) {
+                        PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+                        enchantArmor(player);
+                        context.getSource().sendFeedback(Text.of("Armor enchanted successfully!"), false);
+                    }
+                    return 1;
+                }));
         });
+    }
+    private void enchantArmor(PlayerEntity player) {
+        // Define the enchantment level
+        int enchantmentLevel = 3; // Example level for the Protection enchantment
+
+        // Apply enchantment to each armor piece
+        for (int i = 0; i < player.getInventory().armor.size(); i++) {
+            ItemStack armorPiece = player.getInventory().armor.get(i);
+            if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
+
+            // Apply the Protection enchantment
+            Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
+            enchantments.put(Enchantments.PROTECTION, enchantmentLevel);
+            EnchantmentHelper.set(enchantments, armorPiece);
+        }
     }
 
     private void handlePlayerDeath(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
