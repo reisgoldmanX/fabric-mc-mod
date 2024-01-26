@@ -34,6 +34,17 @@ public class ExampleMod implements ModInitializer {
                         }
                         return 1;
                     }));
+            // Register downgradearmor command
+            dispatcher.register(CommandManager.literal("downgradearmor")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(context -> {
+                    if (context.getSource().getEntity() instanceof PlayerEntity) {
+                        PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+                        downgradeArmor(player);
+                        context.getSource().sendFeedback(Text.of("Armor downgraded to the previous tier!"), false);
+                    }
+                    return 1;
+                }));
         });
     }
 
@@ -47,6 +58,42 @@ public class ExampleMod implements ModInitializer {
         // Clear only the armor slots of the old player
         for (int i = 0; i < oldPlayer.getInventory().armor.size(); i++) {
             oldPlayer.getInventory().armor.get(i).setCount(0);
+        }
+    }
+    private void downgradeArmor(PlayerEntity player) {
+        // Define the downgrade path
+        Map<Item, Item> downgradePath = new HashMap<>();
+        downgradePath.put(Items.NETHERITE_BOOTS, Items.DIAMOND_BOOTS);
+        downgradePath.put(Items.NETHERITE_LEGGINGS, Items.DIAMOND_LEGGINGS);
+        downgradePath.put(Items.NETHERITE_CHESTPLATE, Items.DIAMOND_CHESTPLATE);
+        downgradePath.put(Items.NETHERITE_HELMET, Items.DIAMOND_HELMET);
+
+        downgradePath.put(Items.DIAMOND_BOOTS, Items.IRON_BOOTS);
+        downgradePath.put(Items.DIAMOND_LEGGINGS, Items.IRON_LEGGINGS);
+        downgradePath.put(Items.DIAMOND_CHESTPLATE, Items.IRON_CHESTPLATE);
+        downgradePath.put(Items.DIAMOND_HELMET, Items.IRON_HELMET);
+
+        downgradePath.put(Items.IRON_BOOTS, Items.LEATHER_BOOTS);
+        downgradePath.put(Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS);
+        downgradePath.put(Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE);
+        downgradePath.put(Items.IRON_HELMET, Items.LEATHER_HELMET);
+
+        // Downgrade each armor piece based on the defined path
+        for (int i = 0; i < player.getInventory().armor.size(); i++) {
+            ItemStack currentArmorPiece = player.getInventory().armor.get(i);
+            if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+
+            Item downgradedArmorItem = downgradePath.get(currentArmorPiece.getItem());
+            if (downgradedArmorItem != null) {
+                ItemStack downgradedArmorPiece = new ItemStack(downgradedArmorItem);
+                downgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
+
+                if (currentArmorPiece.hasNbt()) {
+                    downgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
+                }
+
+                player.getInventory().armor.set(i, downgradedArmorPiece);
+            }
         }
     }
 
