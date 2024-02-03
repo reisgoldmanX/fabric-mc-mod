@@ -41,7 +41,7 @@ public class ExampleMod implements ModInitializer {
                     if (context.getSource().getEntity() instanceof PlayerEntity) {
                         PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
                         downgradeArmor(player);
-                        context.getSource().sendFeedback(Text.of("Armor downgraded to the previous tier!"), false);
+                        context.getSource().sendFeedback(() -> Text.of("Armor downgraded to the previous tier!"), false);
                     }
                     return 1;
                 }));
@@ -52,7 +52,7 @@ public class ExampleMod implements ModInitializer {
                     if (context.getSource().getEntity() instanceof PlayerEntity) {
                         PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
                         enchantArmor(player);
-                        context.getSource().sendFeedback(Text.of("Armor enchanted successfully!"), false);
+                        context.getSource().sendFeedback(() -> Text.of("Armor enchanted successfully!"), false);
                     }
                     return 1;
                 }));
