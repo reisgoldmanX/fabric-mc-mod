@@ -1,4 +1,4 @@
-package com.example;
+ package com.example;
 
 // Importing necessary classes
 import net.fabricmc.api.ModInitializer;
@@ -13,6 +13,10 @@ import net.minecraft.item.Items;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
+import net.minecraft.enchantment.Enchantment;
+
 
 import java.util.HashMap;
 import java.util.Map;
@@ -58,21 +62,7 @@ public class ExampleMod implements ModInitializer {
                 }));
         });
     }
-    private void enchantArmor(PlayerEntity player) {
-        // Define the enchantment level
-        int enchantmentLevel = 3; // Example level for the Protection enchantment
-
-        // Apply enchantment to each armor piece
-        for (int i = 0; i < player.getInventory().armor.size(); i++) {
-            ItemStack armorPiece = player.getInventory().armor.get(i);
-            if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
-
-            // Apply the Protection enchantment
-            Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
-            enchantments.put(Enchantments.PROTECTION, enchantmentLevel);
-            EnchantmentHelper.set(enchantments, armorPiece);
-        }
-    }
+    
 
     private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
         // Downgrade armor for the respawned player
