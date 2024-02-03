@@ -74,16 +74,15 @@ public class ExampleMod implements ModInitializer {
         }
     }
 
-    private void handlePlayerDeath(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
+    private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
+        // Downgrade armor for the respawned player
+        downgradeArmor(newPlayer);
+
         DamageSource source = oldPlayer.getRecentDamageSource();
         if (source != null && source.getAttacker() instanceof PlayerEntity) {
             PlayerEntity killer = (PlayerEntity) source.getAttacker();
+            // Upgrade killer's armor
             upgradeArmor(killer);
-        }
-
-        // Clear only the armor slots of the old player
-        for (int i = 0; i < oldPlayer.getInventory().armor.size(); i++) {
-            oldPlayer.getInventory().armor.get(i).setCount(0);
         }
     }
     private void downgradeArmor(PlayerEntity player) {
