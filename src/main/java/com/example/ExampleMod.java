@@ -123,6 +123,17 @@ public class ExampleMod implements ModInitializer {
     }
 
     private void upgradeArmor(PlayerEntity player) {
+
+        boolean hasNoArmor = player.getInventory().armor.stream().allMatch(itemStack -> itemStack.isEmpty());
+
+        if (hasNoArmor) {
+            // Equip player with leather armor set if they have no armor
+            player.getInventory().armor.set(0, new ItemStack(Items.LEATHER_BOOTS));
+            player.getInventory().armor.set(1, new ItemStack(Items.LEATHER_LEGGINGS));
+            player.getInventory().armor.set(2, new ItemStack(Items.LEATHER_CHESTPLATE));
+            player.getInventory().armor.set(3, new ItemStack(Items.LEATHER_HELMET));
+            return; // Stop further execution to avoid overriding this set with higher tier armor
+        }
         // Define the upgrade path for each armor type
         Map<Item, Item> upgradePath = new HashMap<>();
         upgradePath.put(Items.LEATHER_BOOTS, Items.IRON_BOOTS);
@@ -139,8 +150,6 @@ public class ExampleMod implements ModInitializer {
         upgradePath.put(Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
         upgradePath.put(Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
         upgradePath.put(Items.DIAMOND_HELMET, Items.NETHERITE_HELMET);
-
-        // Upgrade each armor piece based on the defined path
         for (int i = 0; i < player.getInventory().armor.size(); i++) {
             ItemStack currentArmorPiece = player.getInventory().armor.get(i);
             if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
