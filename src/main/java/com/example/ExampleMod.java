@@ -16,6 +16,10 @@ import net.minecraft.text.Text;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.particle.ParticleEffect;
+import net.minecraft.util.math.Vec3d;
 
 
 import java.util.HashMap;
@@ -25,7 +29,7 @@ public class ExampleMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        ServerPlayerEvents.AFTER_RESPAWN.register(this::handlePlayerDeath);
+        ServerPlayerEvents.AFTER_RESPAWN.register(this::handlePlayerRespawn);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
             dispatcher.register(CommandManager.literal("upgradearmor")
@@ -34,8 +38,10 @@ public class ExampleMod implements ModInitializer {
                         if (context.getSource().getEntity() instanceof PlayerEntity) {
                             PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
                             upgradeArmor(player);
+                            spawnUpgradeParticles(player);
                             context.getSource().sendFeedback(() -> Text.of("Armor upgraded to the next tier!"), false);
                         }
+
                         return 1;
                     }));
             // Register downgradearmor command
@@ -55,14 +61,27 @@ public class ExampleMod implements ModInitializer {
                 .executes(context -> {
                     if (context.getSource().getEntity() instanceof PlayerEntity) {
                         PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
-                        enchantArmor(player);
+
                         context.getSource().sendFeedback(() -> Text.of("Armor enchanted successfully!"), false);
                     }
                     return 1;
                 }));
         });
     }
-    
+    private void spawnUpgradeParticles(PlayerEntity player) {
+        if (player.getWorld() instanceof ServerWorld) { // Use getWorld() instead of direct access
+            ServerWorld serverWorld = (ServerWorld) player.getWorld(); // Cast to ServerWorld
+            ParticleEffect particleEffect = ParticleTypes.TOTEM_OF_UNDYING; // Use Totem of Undying particle
+
+            // Define the area around the player to spawn particles
+            double x = player.getX();
+            double y = player.getY();
+            double z = player.getZ();
+
+            // Totem of Undying particles are typically concentrated and don't require a spread like happy villager particles
+            serverWorld.spawnParticles(particleEffect, x, y + player.getHeight() / 2.0, z, 30, 0.5, 0.5, 0.5, 0.1);
+        }
+    }
 
     private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
         // Downgrade armor for the respawned player
