@@ -62,6 +62,7 @@ public class ExampleMod implements ModInitializer {
 					.executes(context -> {
 						if (context.getSource().getEntity() instanceof PlayerEntity) {
 							PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+							enchantArmor(player);
 
 							context.getSource().sendFeedback(() -> Text.of("Armor enchanted successfully!"), false);
 						}
@@ -69,6 +70,26 @@ public class ExampleMod implements ModInitializer {
 					}));
 		});
 	}
+	private void enchantArmor(PlayerEntity player) {
+	    for (int i = 0; i < player.getInventory().size(); i++) {
+	        ItemStack armorPiece = player.getInventory().getStack(i);
+	        if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
+	
+	        // Get current Protection enchantment level
+	        int currentLevel = EnchantmentHelper.getLevel(Enchantments.PROTECTION, armorPiece);
+	        
+	        // Increment the enchantment level by 1, up to a max of 5
+	        int newLevel = Math.min(5, currentLevel + 1);
+	        
+	        // If there is room to upgrade the enchantment
+	        if (newLevel > currentLevel) {
+	            Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
+	            enchantments.put(Enchantments.PROTECTION, newLevel);
+	            EnchantmentHelper.set(enchantments, armorPiece);
+	        }
+	    }
+	}
+
 	private void spawnUpgradeParticles(PlayerEntity player) {
 		if (player.getWorld() instanceof ServerWorld) { // Use getWorld() instead of direct access
 			ServerWorld serverWorld = (ServerWorld) player.getWorld(); // Cast to ServerWorld
