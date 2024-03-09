@@ -155,21 +155,24 @@ public class ExampleMod implements ModInitializer {
 		enchantmentsToAdd.put(Items.LEATHER_LEGGINGS, Enchantments.FIRE_PROTECTION);
 		enchantmentsToAdd.put(Items.LEATHER_CHESTPLATE, Enchantments.BLAST_PROTECTION);
 		enchantmentsToAdd.put(Items.LEATHER_HELMET, Enchantments.PROJECTILE_PROTECTION);
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack armorPiece = player.getInventory().getStack(i);
+            if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
 
-	    // Iterate over the player's armor pieces
-	    for (int i = 0; i < player.getInventory().armor.size(); i++) {
-	        ItemStack currentArmorPiece = player.getInventory().armor.get(i);
-	        if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
-	
-	        Enchantment enchantment = enchantmentsToAdd.get(currentArmorPiece.getItem());
-	        if (enchantment != null) {
-	            int currentLevel = EnchantmentHelper.getLevel(enchantment, currentArmorPiece);
-	            int newLevel = currentLevel + 1; // Increment the enchantment level
-	            EnchantmentHelper.setEnchantments(Collections.singletonMap(enchantment, newLevel), currentArmorPiece);
-	        }
-	    }
-	
-	    player.sendMessage(Text.of("Armor enchanted successfully!"), false);
+            Enchantment enchantment = enchantmentsToAdd.get(armorPiece.getItem());
+            if (enchantment != null) {
+                int currentLevel = EnchantmentHelper.getLevel(enchantment, armorPiece);
+                int newLevel = currentLevel + 1;
+
+                // Correctly applying the new enchantment level
+                Map<Enchantment, Integer> currentEnchantments = EnchantmentHelper.get(armorPiece);
+                currentEnchantments.put(enchantment, newLevel);
+
+                EnchantmentHelper.set(currentEnchantments, armorPiece);
+            }
+        }
+
+        player.sendMessage(Text.of("Armor enchanted successfully!"), false);
 
 
 		boolean hasNoArmor = player.getInventory().armor.stream().allMatch(itemStack -> itemStack.isEmpty());
