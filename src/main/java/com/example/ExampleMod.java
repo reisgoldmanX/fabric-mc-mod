@@ -155,21 +155,21 @@ public class ExampleMod implements ModInitializer {
 		enchantmentsToAdd.put(Items.LEATHER_CHESTPLATE, Enchantments.BLAST_PROTECTION);
 		enchantmentsToAdd.put(Items.LEATHER_HELMET, Enchantments.PROJECTILE_PROTECTION);
 
-		// Iterate over the player's armor pieces
-		for (int i = 0; i < player.getInventory().armor.size(); i++) {
-			ItemStack currentArmorPiece = player.getInventory().armor.get(i);
-			if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+	    // Iterate over the player's armor pieces
+	    for (int i = 0; i < player.getInventory().armor.size(); i++) {
+	        ItemStack currentArmorPiece = player.getInventory().armor.get(i);
+	        if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+	
+	        Enchantment enchantment = enchantmentsToAdd.get(currentArmorPiece.getItem());
+	        if (enchantment != null) {
+	            int currentLevel = EnchantmentHelper.getLevel(enchantment, currentArmorPiece);
+	            int newLevel = currentLevel + 1; // Increment the enchantment level
+	            EnchantmentHelper.setEnchantments(Collections.singletonMap(enchantment, newLevel), currentArmorPiece);
+	        }
+	    }
+	
+	    player.sendMessage(Text.of("Armor enchanted successfully!"), false);
 
-			// Check if there are enchantments to add for this armor piece
-			Enchantment enchantment = enchantmentsToAdd.get(currentArmorPiece.getItem());
-			if (enchantment != null) {
-				// Add the specified enchantment to the armor piece
-				currentArmorPiece.addEnchantment(enchantment, 1); // You can change the enchantment level here
-			}
-		}
-
-		// Send feedback to the player
-		player.sendMessage(Text.of("Armor enchanted successfully!"), false);
 
 		boolean hasNoArmor = player.getInventory().armor.stream().allMatch(itemStack -> itemStack.isEmpty());
 
