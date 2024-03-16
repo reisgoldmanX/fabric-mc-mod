@@ -1,4 +1,4 @@
- package com.example;
+package com.example;
 
 // Importing necessary classes
 import net.fabricmc.api.ModInitializer;
@@ -14,166 +14,229 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.nbt.NbtCompound;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ExampleMod implements ModInitializer {
 
-    @Override
-    public void onInitialize() {
-        ServerPlayerEvents.AFTER_RESPAWN.register(this::handlePlayerRespawn);
+	@Override
+	public void onInitialize() {
+		ServerPlayerEvents.AFTER_RESPAWN.register(this::handlePlayerRespawn);
 
-        CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
-            dispatcher.register(CommandManager.literal("upgradearmor")
-                    .requires(source -> source.hasPermissionLevel(2))
-                    .executes(context -> {
-                        if (context.getSource().getEntity() instanceof PlayerEntity) {
-                            PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
-                            upgradeArmor(player);
-                            spawnUpgradeParticles(player);
-                            context.getSource().sendFeedback(() -> Text.of("Armor upgraded to the next tier!"), false);
-                        }
+		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
+			dispatcher.register(CommandManager.literal("upgradearmor")
+					.requires(source -> source.hasPermissionLevel(2))
+					.executes(context -> {
+						if (context.getSource().getEntity() instanceof PlayerEntity) {
+							PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+							upgradeArmor(player);
+							spawnUpgradeParticles(player);
+							context.getSource().sendFeedback(() -> Text.of("Armor upgraded to the next tier!"), false);
+						}
 
-                        return 1;
-                    }));
-            // Register downgradearmor command
-            dispatcher.register(CommandManager.literal("downgradearmor")
-                .requires(source -> source.hasPermissionLevel(2))
-                .executes(context -> {
-                    if (context.getSource().getEntity() instanceof PlayerEntity) {
-                        PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
-                        downgradeArmor(player);
-                        context.getSource().sendFeedback(() -> Text.of("Armor downgraded to the previous tier!"), false);
-                    }
-                    return 1;
-                }));
-            // Register enchantarmor command
-            dispatcher.register(CommandManager.literal("enchantarmor")
-                .requires(source -> source.hasPermissionLevel(2))
-                .executes(context -> {
-                    if (context.getSource().getEntity() instanceof PlayerEntity) {
-                        PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+						return 1;
+					}));
+			// Register downgradearmor command
+			dispatcher.register(CommandManager.literal("downgradearmor")
+					.requires(source -> source.hasPermissionLevel(2))
+					.executes(context -> {
+						if (context.getSource().getEntity() instanceof PlayerEntity) {
+							PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+							downgradeArmor(player);
+							spawnDowngradeParticles(player);
+							context.getSource().sendFeedback(() -> Text.of("Armor downgraded to the previous tier!"), false);
+						}
+						return 1;
+					}));
+			// Register enchantarmor command
+			dispatcher.register(CommandManager.literal("enchantarmor")
+					.requires(source -> source.hasPermissionLevel(2))
+					.executes(context -> {
+						if (context.getSource().getEntity() instanceof PlayerEntity) {
+							PlayerEntity player = (PlayerEntity) context.getSource().getEntity();
+							enchantArmor(player);
 
-                        context.getSource().sendFeedback(() -> Text.of("Armor enchanted successfully!"), false);
-                    }
-                    return 1;
-                }));
-        });
-    }
-    private void spawnUpgradeParticles(PlayerEntity player) {
-        if (player.getWorld() instanceof ServerWorld) { // Use getWorld() instead of direct access
-            ServerWorld serverWorld = (ServerWorld) player.getWorld(); // Cast to ServerWorld
-            ParticleEffect particleEffect = ParticleTypes.TOTEM_OF_UNDYING; // Use Totem of Undying particle
+							context.getSource().sendFeedback(() -> Text.of("Armor enchanted successfully!"), false);
+						}
+						return 1;
+					}));
+		});
+	}
+	private void enchantArmor(PlayerEntity player) {
+	    for (int i = 0; i < player.getInventory().size(); i++) {
+	        ItemStack armorPiece = player.getInventory().getStack(i);
+	        if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
+	
+	        // Get current Protection enchantment level
+	        int currentLevel = EnchantmentHelper.getLevel(Enchantments.PROTECTION, armorPiece);
+	        
+	        // Increment the enchantment level by 1, up to a max of 5
+	        int newLevel = Math.min(5, currentLevel + 1);
+	        
+	        // If there is room to upgrade the enchantment
+	        if (newLevel > currentLevel) {
+	            Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
+	            enchantments.put(Enchantments.PROTECTION, newLevel);
+	            EnchantmentHelper.set(enchantments, armorPiece);
+	        }
+	    }
+	}
 
-            // Define the area around the player to spawn particles
-            double x = player.getX();
-            double y = player.getY();
-            double z = player.getZ();
+	private void spawnUpgradeParticles(PlayerEntity player) {
+		if (player.getWorld() instanceof ServerWorld) { // Use getWorld() instead of direct access
+			ServerWorld serverWorld = (ServerWorld) player.getWorld(); // Cast to ServerWorld
+			ParticleEffect particleEffect = ParticleTypes.TOTEM_OF_UNDYING; // Use Totem of Undying particle
 
-            // Totem of Undying particles are typically concentrated and don't require a spread like happy villager particles
-            serverWorld.spawnParticles(particleEffect, x, y + player.getHeight() / 2.0, z, 30, 0.5, 0.5, 0.5, 0.1);
-        }
-    }
+			// Define the area around the player to spawn particles
+			double x = player.getX();
+			double y = player.getY();
+			double z = player.getZ();
 
-    private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
-        // Downgrade armor for the respawned player
-        downgradeArmor(newPlayer);
+			// Totem of Undying particles are typically concentrated and don't require a spread like happy villager particles
+			serverWorld.spawnParticles(particleEffect, x, y + player.getHeight() / 2.0, z, 30, 0.5, 0.5, 0.5, 0.1);
+		}
+	}
 
-        DamageSource source = oldPlayer.getRecentDamageSource();
-        if (source != null && source.getAttacker() instanceof PlayerEntity) {
-            PlayerEntity killer = (PlayerEntity) source.getAttacker();
-            // Upgrade killer's armor
-            upgradeArmor(killer);
-        }
-    }
-    private void downgradeArmor(PlayerEntity player) {
-        // Define the downgrade path
-        Map<Item, Item> downgradePath = new HashMap<>();
-        downgradePath.put(Items.NETHERITE_BOOTS, Items.DIAMOND_BOOTS);
-        downgradePath.put(Items.NETHERITE_LEGGINGS, Items.DIAMOND_LEGGINGS);
-        downgradePath.put(Items.NETHERITE_CHESTPLATE, Items.DIAMOND_CHESTPLATE);
-        downgradePath.put(Items.NETHERITE_HELMET, Items.DIAMOND_HELMET);
+	private void spawnDowngradeParticles(PlayerEntity player) {
+		if (player.getWorld() instanceof ServerWorld) { // Use getWorld() instead of direct access
+			ServerWorld serverWorld = (ServerWorld) player.getWorld(); // Cast to ServerWorld
+			ParticleEffect particleEffect = ParticleTypes.DRIPPING_LAVA; // Use Totem of Undying particle
 
-        downgradePath.put(Items.DIAMOND_BOOTS, Items.IRON_BOOTS);
-        downgradePath.put(Items.DIAMOND_LEGGINGS, Items.IRON_LEGGINGS);
-        downgradePath.put(Items.DIAMOND_CHESTPLATE, Items.IRON_CHESTPLATE);
-        downgradePath.put(Items.DIAMOND_HELMET, Items.IRON_HELMET);
+			// Define the area around the player to spawn particles
+			double x = player.getX();
+			double y = player.getY();
+			double z = player.getZ();
 
-        downgradePath.put(Items.IRON_BOOTS, Items.LEATHER_BOOTS);
-        downgradePath.put(Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS);
-        downgradePath.put(Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE);
-        downgradePath.put(Items.IRON_HELMET, Items.LEATHER_HELMET);
+			// Totem of Undying particles are typically concentrated and don't require a spread like happy villager particles
+			serverWorld.spawnParticles(particleEffect, x, y + player.getHeight() / 2.0, z, 30, 0.5, 0.5, 0.5, 0.1);
+		}
+	}
 
-        // Downgrade each armor piece based on the defined path
-        for (int i = 0; i < player.getInventory().armor.size(); i++) {
-            ItemStack currentArmorPiece = player.getInventory().armor.get(i);
-            if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
 
-            Item downgradedArmorItem = downgradePath.get(currentArmorPiece.getItem());
-            if (downgradedArmorItem != null) {
-                ItemStack downgradedArmorPiece = new ItemStack(downgradedArmorItem);
-                downgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
+	private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
+		// Downgrade armor for the respawned player
+		downgradeArmor(newPlayer);
 
-                if (currentArmorPiece.hasNbt()) {
-                    downgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
-                }
+		DamageSource source = oldPlayer.getRecentDamageSource();
+		if (source != null && source.getAttacker() instanceof PlayerEntity) {
+			PlayerEntity killer = (PlayerEntity) source.getAttacker();
+			// Upgrade killer's armor
+			upgradeArmor(killer);
+		}
+	}
+	private void downgradeArmor(PlayerEntity player) {
+		// Define the downgrade path
+		Map<Item, Item> downgradePath = new HashMap<>();
+		downgradePath.put(Items.NETHERITE_BOOTS, Items.DIAMOND_BOOTS);
+		downgradePath.put(Items.NETHERITE_LEGGINGS, Items.DIAMOND_LEGGINGS);
+		downgradePath.put(Items.NETHERITE_CHESTPLATE, Items.DIAMOND_CHESTPLATE);
+		downgradePath.put(Items.NETHERITE_HELMET, Items.DIAMOND_HELMET);
 
-                player.getInventory().armor.set(i, downgradedArmorPiece);
+		downgradePath.put(Items.DIAMOND_BOOTS, Items.IRON_BOOTS);
+		downgradePath.put(Items.DIAMOND_LEGGINGS, Items.IRON_LEGGINGS);
+		downgradePath.put(Items.DIAMOND_CHESTPLATE, Items.IRON_CHESTPLATE);
+		downgradePath.put(Items.DIAMOND_HELMET, Items.IRON_HELMET);
+
+		downgradePath.put(Items.IRON_BOOTS, Items.LEATHER_BOOTS);
+		downgradePath.put(Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS);
+		downgradePath.put(Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE);
+		downgradePath.put(Items.IRON_HELMET, Items.LEATHER_HELMET);
+
+		// Downgrade each armor piece based on the defined path
+		for (int i = 0; i < player.getInventory().armor.size(); i++) {
+			ItemStack currentArmorPiece = player.getInventory().armor.get(i);
+			if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+
+			Item downgradedArmorItem = downgradePath.get(currentArmorPiece.getItem());
+			if (downgradedArmorItem != null) {
+				ItemStack downgradedArmorPiece = new ItemStack(downgradedArmorItem);
+				downgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
+
+				if (currentArmorPiece.hasNbt()) {
+					downgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
+				}
+
+				player.getInventory().armor.set(i, downgradedArmorPiece);
+			}
+		}
+	}
+
+	private void upgradeArmor(PlayerEntity player) {
+		// Define the enchantments to add for each armor piece
+		Map<Item, Enchantment> enchantmentsToAdd = new HashMap<>();
+		enchantmentsToAdd.put(Items.LEATHER_BOOTS, Enchantments.PROTECTION);
+		enchantmentsToAdd.put(Items.LEATHER_LEGGINGS, Enchantments.FIRE_PROTECTION);
+		enchantmentsToAdd.put(Items.LEATHER_CHESTPLATE, Enchantments.BLAST_PROTECTION);
+		enchantmentsToAdd.put(Items.LEATHER_HELMET, Enchantments.PROJECTILE_PROTECTION);
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack armorPiece = player.getInventory().getStack(i);
+            if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
+
+            Enchantment enchantment = enchantmentsToAdd.get(armorPiece.getItem());
+            if (enchantment != null) {
+                int currentLevel = EnchantmentHelper.getLevel(enchantment, armorPiece);
+                int newLevel = currentLevel + 1;
+
+                // Correctly applying the new enchantment level
+                Map<Enchantment, Integer> currentEnchantments = EnchantmentHelper.get(armorPiece);
+                currentEnchantments.put(enchantment, newLevel);
+
+                EnchantmentHelper.set(currentEnchantments, armorPiece);
             }
         }
-    }
 
-    private void upgradeArmor(PlayerEntity player) {
+        player.sendMessage(Text.of("Armor enchanted successfully!"), false);
 
-        boolean hasNoArmor = player.getInventory().armor.stream().allMatch(itemStack -> itemStack.isEmpty());
 
-        if (hasNoArmor) {
-            // Equip player with leather armor set if they have no armor
-            player.getInventory().armor.set(0, new ItemStack(Items.LEATHER_BOOTS));
-            player.getInventory().armor.set(1, new ItemStack(Items.LEATHER_LEGGINGS));
-            player.getInventory().armor.set(2, new ItemStack(Items.LEATHER_CHESTPLATE));
-            player.getInventory().armor.set(3, new ItemStack(Items.LEATHER_HELMET));
-            return; // Stop further execution to avoid overriding this set with higher tier armor
-        }
-        // Define the upgrade path for each armor type
-        Map<Item, Item> upgradePath = new HashMap<>();
-        upgradePath.put(Items.LEATHER_BOOTS, Items.IRON_BOOTS);
-        upgradePath.put(Items.LEATHER_LEGGINGS, Items.IRON_LEGGINGS);
-        upgradePath.put(Items.LEATHER_CHESTPLATE, Items.IRON_CHESTPLATE);
-        upgradePath.put(Items.LEATHER_HELMET, Items.IRON_HELMET);
+		boolean hasNoArmor = player.getInventory().armor.stream().allMatch(itemStack -> itemStack.isEmpty());
 
-        upgradePath.put(Items.IRON_BOOTS, Items.DIAMOND_BOOTS);
-        upgradePath.put(Items.IRON_LEGGINGS, Items.DIAMOND_LEGGINGS);
-        upgradePath.put(Items.IRON_CHESTPLATE, Items.DIAMOND_CHESTPLATE);
-        upgradePath.put(Items.IRON_HELMET, Items.DIAMOND_HELMET);
+		if (hasNoArmor) {
+			// Equip player with leather armor set if they have no armor
+			player.getInventory().armor.set(0, new ItemStack(Items.LEATHER_BOOTS));
+			player.getInventory().armor.set(1, new ItemStack(Items.LEATHER_LEGGINGS));
+			player.getInventory().armor.set(2, new ItemStack(Items.LEATHER_CHESTPLATE));
+			player.getInventory().armor.set(3, new ItemStack(Items.LEATHER_HELMET));
+			return; // Stop further execution to avoid overriding this set with higher tier armor
+		}
+		// Define the upgrade path for each armor type
+		Map<Item, Item> upgradePath = new HashMap<>();
+		upgradePath.put(Items.LEATHER_BOOTS, Items.IRON_BOOTS);
+		upgradePath.put(Items.LEATHER_LEGGINGS, Items.IRON_LEGGINGS);
+		upgradePath.put(Items.LEATHER_CHESTPLATE, Items.IRON_CHESTPLATE);
+		upgradePath.put(Items.LEATHER_HELMET, Items.IRON_HELMET);
 
-        upgradePath.put(Items.DIAMOND_BOOTS, Items.NETHERITE_BOOTS);
-        upgradePath.put(Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
-        upgradePath.put(Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
-        upgradePath.put(Items.DIAMOND_HELMET, Items.NETHERITE_HELMET);
-        for (int i = 0; i < player.getInventory().armor.size(); i++) {
-            ItemStack currentArmorPiece = player.getInventory().armor.get(i);
-            if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+		upgradePath.put(Items.IRON_BOOTS, Items.DIAMOND_BOOTS);
+		upgradePath.put(Items.IRON_LEGGINGS, Items.DIAMOND_LEGGINGS);
+		upgradePath.put(Items.IRON_CHESTPLATE, Items.DIAMOND_CHESTPLATE);
+		upgradePath.put(Items.IRON_HELMET, Items.DIAMOND_HELMET);
 
-            Item upgradedArmorItem = upgradePath.get(currentArmorPiece.getItem());
-            if (upgradedArmorItem != null) {
-                ItemStack upgradedArmorPiece = new ItemStack(upgradedArmorItem);
-                upgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
+		upgradePath.put(Items.DIAMOND_BOOTS, Items.NETHERITE_BOOTS);
+		upgradePath.put(Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
+		upgradePath.put(Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
+		upgradePath.put(Items.DIAMOND_HELMET, Items.NETHERITE_HELMET);
+		for (int i = 0; i < player.getInventory().armor.size(); i++) {
+			ItemStack currentArmorPiece = player.getInventory().armor.get(i);
+			if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
 
-                if (currentArmorPiece.hasNbt()) {
-                    upgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
-                }
+			Item upgradedArmorItem = upgradePath.get(currentArmorPiece.getItem());
+			if (upgradedArmorItem != null) {
+				ItemStack upgradedArmorPiece = new ItemStack(upgradedArmorItem);
+				upgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
 
-                player.getInventory().armor.set(i, upgradedArmorPiece);
-            }
-        }
-    }
+				if (currentArmorPiece.hasNbt()) {
+					upgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
+				}
+
+				player.getInventory().armor.set(i, upgradedArmorPiece);
+			}
+		}
+	}
 }
