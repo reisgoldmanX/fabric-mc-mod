@@ -71,24 +71,33 @@ public class ExampleMod implements ModInitializer {
 		});
 	}
 	private void enchantArmor(PlayerEntity player) {
-	    for (int i = 0; i < player.getInventory().size(); i++) {
-	        ItemStack armorPiece = player.getInventory().getStack(i);
-	        if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
-	
-	        // Get current Protection enchantment level
-	        int currentLevel = EnchantmentHelper.getLevel(Enchantments.PROTECTION, armorPiece);
-	        
-	        // Increment the enchantment level by 1, up to a max of 5
-	        int newLevel = Math.min(5, currentLevel + 1);
-	        
-	        // If there is room to upgrade the enchantment
-	        if (newLevel > currentLevel) {
-	            Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
-	            enchantments.put(Enchantments.PROTECTION, newLevel);
-	            EnchantmentHelper.set(enchantments, armorPiece);
-	        }
-	    }
+		Item lastArmorType = null; // Track the last armor type processed
+
+		for (int i = 0; i < player.getInventory().size(); i++) {
+			ItemStack armorPiece = player.getInventory().getStack(i);
+			if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
+
+			// Reset enchantment level incrementing if the armor type changes
+			if (lastArmorType != armorPiece.getItem()) {
+				lastArmorType = armorPiece.getItem();
+			}
+
+			// Get current Protection enchantment level
+			int currentLevel = EnchantmentHelper.getLevel(Enchantments.PROTECTION, armorPiece);
+
+			// Increment the enchantment level by 1, up to a max of 5
+			int newLevel = Math.min(5, currentLevel + 1);
+
+			// If there is room to upgrade the enchantment
+			if (newLevel > currentLevel) {
+				Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
+				enchantments.put(Enchantments.PROTECTION, newLevel);
+				EnchantmentHelper.set(enchantments, armorPiece);
+			}
+		}
+		spawnUpgradeParticles(player);
 	}
+
 
 	private void spawnUpgradeParticles(PlayerEntity player) {
 		if (player.getWorld() instanceof ServerWorld) { // Use getWorld() instead of direct access
@@ -170,30 +179,6 @@ public class ExampleMod implements ModInitializer {
 	}
 
 	private void upgradeArmor(PlayerEntity player) {
-		// Define the enchantments to add for each armor piece
-		Map<Item, Enchantment> enchantmentsToAdd = new HashMap<>();
-		enchantmentsToAdd.put(Items.LEATHER_BOOTS, Enchantments.PROTECTION);
-		enchantmentsToAdd.put(Items.LEATHER_LEGGINGS, Enchantments.FIRE_PROTECTION);
-		enchantmentsToAdd.put(Items.LEATHER_CHESTPLATE, Enchantments.BLAST_PROTECTION);
-		enchantmentsToAdd.put(Items.LEATHER_HELMET, Enchantments.PROJECTILE_PROTECTION);
-        for (int i = 0; i < player.getInventory().size(); i++) {
-            ItemStack armorPiece = player.getInventory().getStack(i);
-            if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
-
-            Enchantment enchantment = enchantmentsToAdd.get(armorPiece.getItem());
-            if (enchantment != null) {
-                int currentLevel = EnchantmentHelper.getLevel(enchantment, armorPiece);
-                int newLevel = currentLevel + 1;
-
-                // Correctly applying the new enchantment level
-                Map<Enchantment, Integer> currentEnchantments = EnchantmentHelper.get(armorPiece);
-                currentEnchantments.put(enchantment, newLevel);
-
-                EnchantmentHelper.set(currentEnchantments, armorPiece);
-            }
-        }
-
-        player.sendMessage(Text.of("Armor enchanted successfully!"), false);
 
 
 		boolean hasNoArmor = player.getInventory().armor.stream().allMatch(itemStack -> itemStack.isEmpty());
@@ -233,6 +218,7 @@ public class ExampleMod implements ModInitializer {
 
 				if (currentArmorPiece.hasNbt()) {
 					upgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
+					upgradedArmorPiece.removeSubNbt("Enchantments"); // Clear existing enchantments
 				}
 
 				player.getInventory().armor.set(i, upgradedArmorPiece);
