@@ -1,3 +1,8 @@
+// Deenchant armor
+// make it so that the upgrade function and enchant armor works together with the correct order
+// order goes with armor enchant until end and upgrade to new armor
+
+
 package com.example;
 
 // Importing necessary classes
@@ -175,7 +180,9 @@ public class ExampleMod implements ModInitializer {
 				downgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
 
 				if (currentArmorPiece.hasNbt()) {
-					downgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
+					NbtCompound nbt = currentArmorPiece.getNbt().copy();
+					nbt.remove("Damage"); // Remove the durability (damage) information
+					downgradedArmorPiece.setNbt(nbt);
 				}
 
 				player.getInventory().armor.set(i, downgradedArmorPiece);
@@ -222,7 +229,9 @@ public class ExampleMod implements ModInitializer {
 				upgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
 
 				if (currentArmorPiece.hasNbt()) {
-					upgradedArmorPiece.setNbt(currentArmorPiece.getNbt().copy());
+					NbtCompound nbt = currentArmorPiece.getNbt().copy();
+					nbt.remove("Damage"); // Remove the durability (damage) information
+					upgradedArmorPiece.setNbt(nbt);
 					upgradedArmorPiece.removeSubNbt("Enchantments"); // Clear existing enchantments
 				}
 
