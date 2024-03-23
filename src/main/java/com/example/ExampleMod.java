@@ -129,18 +129,23 @@ public class ExampleMod implements ModInitializer {
 		}
 	}
 
-
 	private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
-		// Downgrade armor for the respawned player
-		downgradeArmor(newPlayer);
-
-		DamageSource source = oldPlayer.getRecentDamageSource();
-		if (source != null && source.getAttacker() instanceof PlayerEntity) {
-			PlayerEntity killer = (PlayerEntity) source.getAttacker();
-			// Upgrade killer's armor
-			upgradeArmor(killer);
-		}
+	    // Downgrade armor for the respawned player
+	    downgradeArmor(newPlayer);
+	
+	    // Upgrade armor for the killer, if applicable
+	    DamageSource source = oldPlayer.getRecentDamageSource();
+	    if (source != null && source.getAttacker() instanceof PlayerEntity) {
+	        PlayerEntity killer = (PlayerEntity) source.getAttacker();
+	        upgradeArmor(killer);
+	        // Synchronize the killer's inventory changes
+	        killer.playerScreenHandler.sendContentUpdates();
+	    }
+	
+	    // Synchronize the respawned player's inventory changes
+	    newPlayer.playerScreenHandler.sendContentUpdates();
 	}
+
 	private void downgradeArmor(PlayerEntity player) {
 		// Define the downgrade path
 		Map<Item, Item> downgradePath = new HashMap<>();
