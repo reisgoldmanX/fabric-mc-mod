@@ -1,7 +1,7 @@
 // Deenchant armor
 // make it so that the upgrade function and enchant armor works together with the correct order
 // order goes with armor enchant until end and upgrade to new armor
-
+// enchent when player is killed connect to kill system or start of crafting recipe for upgrading armor
 
 package com.example;
 
