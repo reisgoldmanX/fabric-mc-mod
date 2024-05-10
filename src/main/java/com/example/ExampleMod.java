@@ -1,6 +1,5 @@
-// Deenchant armor
-// make it so that the upgrade function and enchant armor works together with the correct order
-// order goes with armor enchant until end and upgrade to new armor
+// Deenchant armor should be fixed
+
 
 
 package com.example;
@@ -31,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ExampleMod implements ModInitializer {
+	private final static int MAX_ENCHANTMENT_LEVEL = 5;
 
 	@Override
 	public void onInitialize() {
@@ -135,20 +135,20 @@ public class ExampleMod implements ModInitializer {
 	}
 
 	private void handlePlayerRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
-	    // Downgrade armor for the respawned player
-	    downgradeArmor(newPlayer);
-	
-	    // Upgrade armor for the killer, if applicable
-	    DamageSource source = oldPlayer.getRecentDamageSource();
-	    if (source != null && source.getAttacker() instanceof PlayerEntity) {
-	        PlayerEntity killer = (PlayerEntity) source.getAttacker();
-	        upgradeArmor(killer);
-	        // Synchronize the killer's inventory changes
-	        killer.playerScreenHandler.sendContentUpdates();
-	    }
-	
-	    // Synchronize the respawned player's inventory changes
-	    newPlayer.playerScreenHandler.sendContentUpdates();
+		// Downgrade armor for the respawned player
+		downgradeArmor(newPlayer);
+
+		// Upgrade armor for the killer, if applicable
+		DamageSource source = oldPlayer.getRecentDamageSource();
+		if (source != null && source.getAttacker() instanceof PlayerEntity) {
+			PlayerEntity killer = (PlayerEntity) source.getAttacker();
+			upgradeArmor(killer);
+			// Synchronize the killer's inventory changes
+			killer.playerScreenHandler.sendContentUpdates();
+		}
+
+		// Synchronize the respawned player's inventory changes
+		newPlayer.playerScreenHandler.sendContentUpdates();
 	}
 
 	private void downgradeArmor(PlayerEntity player) {
@@ -169,19 +169,46 @@ public class ExampleMod implements ModInitializer {
 		downgradePath.put(Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE);
 		downgradePath.put(Items.IRON_HELMET, Items.LEATHER_HELMET);
 
-		// Downgrade each armor piece based on the defined path
+		// Process each armor piece
 		for (int i = 0; i < player.getInventory().armor.size(); i++) {
-			ItemStack currentArmorPiece = player.getInventory().armor.get(i);
-			if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+			ItemStack armorPiece = player.getInventory().armor.get(i);
+			if (!(armorPiece.getItem() instanceof ArmorItem)) continue;
 
-			Item downgradedArmorItem = downgradePath.get(currentArmorPiece.getItem());
+			Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(armorPiece);
+			if (!enchantments.isEmpty()) {
+				// Reduce enchantment level step by step
+				boolean hasEnchantmentsLeft = false;
+				for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+					int newLevel = entry.getValue() - 1;
+					if (newLevel > 0) {
+						enchantments.put(entry.getKey(), newLevel);
+						hasEnchantmentsLeft = true;
+					} else {
+						enchantments.remove(entry.getKey());
+					}
+				}
+				EnchantmentHelper.set(enchantments, armorPiece);
+				if (hasEnchantmentsLeft) {
+					continue; // Continue to next iteration to handle other items without changing material yet
+				}
+			}
+
+			// Downgrade material once no enchantments are left
+			Item downgradedArmorItem = downgradePath.get(armorPiece.getItem());
 			if (downgradedArmorItem != null) {
 				ItemStack downgradedArmorPiece = new ItemStack(downgradedArmorItem);
-				downgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
+				downgradedArmorPiece.setDamage(armorPiece.getDamage());
 
-				if (currentArmorPiece.hasNbt()) {
-					NbtCompound nbt = currentArmorPiece.getNbt().copy();
-					nbt.remove("Damage"); // Remove the durability (damage) information
+				// Reapply a full set of enchantments to the downgraded armor
+				enchantments.clear();
+				enchantments.put(Enchantments.PROTECTION, 5);
+				EnchantmentHelper.set(enchantments, downgradedArmorPiece);
+
+				// If the original armor had NBT data, copy it, excluding durability and enchantments
+				if (armorPiece.hasNbt()) {
+					NbtCompound nbt = armorPiece.getNbt().copy();
+					nbt.remove("Damage");
+					nbt.remove("Enchantments");
 					downgradedArmorPiece.setNbt(nbt);
 				}
 
@@ -219,22 +246,38 @@ public class ExampleMod implements ModInitializer {
 		upgradePath.put(Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
 		upgradePath.put(Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
 		upgradePath.put(Items.DIAMOND_HELMET, Items.NETHERITE_HELMET);
-		for (int i = 0; i < player.getInventory().armor.size(); i++) {
-			ItemStack currentArmorPiece = player.getInventory().armor.get(i);
-			if (!(currentArmorPiece.getItem() instanceof ArmorItem)) continue;
+		boolean allArmorFullyEnchanted = true;
+		for (ItemStack armorPiece : player.getInventory().armor) {
+			if (!(armorPiece.getItem() instanceof ArmorItem)) {
+				continue;
+			}
+			int currentEnchantmentLevel = EnchantmentHelper.getLevel(Enchantments.PROTECTION, armorPiece);
+			if (currentEnchantmentLevel < MAX_ENCHANTMENT_LEVEL) {
+				allArmorFullyEnchanted = false;
+				break;
+			}
+		}
 
-			Item upgradedArmorItem = upgradePath.get(currentArmorPiece.getItem());
+		if (!allArmorFullyEnchanted) {
+			enchantArmor(player);
+			return; // Stop execution to allow enchanting to complete before upgrading
+		}
+
+		// Only upgrade armor if all pieces are fully enchanted
+		for (int i = 0; i < player.getInventory().armor.size(); i++) {
+			ItemStack armorPiece = player.getInventory().armor.get(i);
+			if (!(armorPiece.getItem() instanceof ArmorItem)) {
+				continue;
+			}
+
+			Item upgradedArmorItem = upgradePath.get(armorPiece.getItem());
 			if (upgradedArmorItem != null) {
 				ItemStack upgradedArmorPiece = new ItemStack(upgradedArmorItem);
-				upgradedArmorPiece.setDamage(currentArmorPiece.getDamage());
-
-				if (currentArmorPiece.hasNbt()) {
-					NbtCompound nbt = currentArmorPiece.getNbt().copy();
-					nbt.remove("Damage"); // Remove the durability (damage) information
-					upgradedArmorPiece.setNbt(nbt);
-					upgradedArmorPiece.removeSubNbt("Enchantments"); // Clear existing enchantments
-				}
-
+				upgradedArmorPiece.setDamage(armorPiece.getDamage());
+				NbtCompound nbt = armorPiece.getOrCreateNbt().copy();
+				nbt.remove("Damage");
+				nbt.remove("Enchantments"); // Clear enchantments for new armor
+				upgradedArmorPiece.setNbt(nbt);
 				player.getInventory().armor.set(i, upgradedArmorPiece);
 			}
 		}
