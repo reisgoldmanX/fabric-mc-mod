@@ -1,6 +1,6 @@
 // Deenchant armor
 // make it so that the upgrade function and enchant armor works together with the correct order
-// order goes with armor enchant until end and upgrade to new armor
+// order goes with armor enchant until end and upgrade to new armor 
 
 
 package com.example;
