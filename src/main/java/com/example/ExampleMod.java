@@ -1,8 +1,9 @@
+
 // Deenchant armor should be fixed
 
 
 
-package com.example;
+package projectexecute.execute;
 
 // Importing necessary classes
 import net.fabricmc.api.ModInitializer;
@@ -25,15 +26,21 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.nbt.NbtCompound;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ExampleMod implements ModInitializer {
+public class ProjectExecute implements ModInitializer {
 	private final static int MAX_ENCHANTMENT_LEVEL = 5;
+	public static final String MOD_ID = "execute";
+	public static final Logger LOGGER = LoggerFactory.getLogger("MOD_ID");
 
 	@Override
 	public void onInitialize() {
+		LOGGER.info("Hello Fabric world!");
+
 		ServerPlayerEvents.AFTER_RESPAWN.register(this::handlePlayerRespawn);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
