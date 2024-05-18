@@ -28,6 +28,8 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.nbt.NbtCompound;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projectexecute.execute.item.ModItemGroups;
+import projectexecute.execute.item.Moditem;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,8 +41,8 @@ public class ProjectExecute implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("Hello Fabric world!");
-
+			ModItemGroups.registerItemGroups();
+			Moditem.registerModItem();
 		ServerPlayerEvents.AFTER_RESPAWN.register(this::handlePlayerRespawn);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
